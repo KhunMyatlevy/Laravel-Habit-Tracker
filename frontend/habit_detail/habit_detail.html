@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habit Detail</title>
+    <style>
+        /* Basic styling for the calendar */
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            max-width: 500px;
+            margin: 20px auto;
+        }
+
+        .calendar div {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+
+        .header {
+            font-weight: bold;
+        }
+
+        .completed {
+            background-color: green;
+            color: white;
+        }
+
+        .skipped {
+            background-color: red;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Habit Detail Page</h1>
+
+    <h2 id="habit-title"></h2>
+    <p id="habit-description"></p>
+
+    <h1>Calendar for Current Month</h1>
+    <div class="calendar" id="calendar"></div>
+    <div id="completion-rate"></div>  <!-- This will show the completion rate -->
+
+
+    <script>
+        // Function to generate the calendar based on the data
+        function generateCalendar(data) {
+            const calendarElement = document.getElementById('calendar');
+
+            // Get current month and year
+            const currentDate = new Date();
+            const currentYear = currentDate.getFullYear();
+            const currentMonth = currentDate.getMonth(); // 0-indexed (0 for January, 11 for December)
+
+            // Get the first and last date of the current month
+            const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+            const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0); // Last day of the month
+
+            // Get the starting day of the week (0-6, where 0 is Sunday, 6 is Saturday)
+            const startDay = firstDayOfMonth.getDay();
+
+            // Create a list of all the days in the month
+            const totalDaysInMonth = lastDayOfMonth.getDate();
+
+            // Create the calendar header (days of the week)
+            const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            calendarElement.innerHTML = weekDays.map(day => `<div class="header">${day}</div>`).join('');
+
+            // Add empty divs for the days before the first day of the month
+            for (let i = 0; i < startDay; i++) {
+                calendarElement.innerHTML += '<div></div>';
+            }
+
+            // Add the actual days of the month to the calendar
+            for (let day = 1; day <= totalDaysInMonth; day++) {
+                let dayClass = ''; // Class for day (Completed/Skipped)
+                let dayLog = data.logs.find(log => new Date(log.date).getDate() === day);
+
+                // Check if there's a log for the day
+                if (dayLog) {
+                    if (dayLog.status === 'Completed') {
+                        dayClass = 'completed'; // Green for completed
+                    } else if (dayLog.status === 'Skipped') {
+                        dayClass = 'skipped'; // Red for skipped
+                    }
+                }
+
+                // Add the day to the calendar with the appropriate class
+                calendarElement.innerHTML += `<div class="${dayClass}">${day}</div>`;
+            }
+        }
+
+
+     
+        // Get the current habit ID from localStorage
+    const habitId = localStorage.getItem('current_habit_id');
+    const accessToken = localStorage.getItem('access_token'); // Get the access token from localStorage
+
+    if (habitId && accessToken) {
+        // Define the API endpoint
+        const endpoint = `http://127.0.0.1:8000/api/habits/${habitId}/history`;
+
+        // Fetch data from the API with authorization token
+        fetch(endpoint, {
+            method: 'GET', 
+            headers: {
+                'Authorization': `Bearer ${accessToken}`, // Add the token to the headers
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Log the JSON data to the console
+            console.log(data);
+
+            // Call the function to generate the calendar view (pass the fetched data)
+            displayHabitInfo(data);
+            generateCalendar(data);
+            displayCompletionRate(data);
+        })
+        .catch(error => {
+            console.error('Error fetching habit data:', error);
+        });
+    } else {
+        console.error('No current_habit_id or access_token found in localStorage.');
+    }
+
+
+    // Assuming `data` is already fetched and available from previous function
+    function displayCompletionRate(data) {
+        // Get the completion ratio from the data
+        const completionRate = data.completion_ratio;
+
+        // Display it in the completion-rate container
+        const completionRateContainer = document.getElementById('completion-rate');
+        completionRateContainer.textContent = `Completion Rate: ${completionRate}`;
+    }
+
+
+    function displayHabitInfo(data) {
+            // Get the habit info from the data
+            const habit = data.habit;
+
+            // Set the title and description in the HTML
+            const habitTitleElement = document.getElementById('habit-title');
+            const habitDescriptionElement = document.getElementById('habit-description');
+
+            habitTitleElement.textContent = habit.title;
+            habitDescriptionElement.textContent = habit.description;
+        }
+
+    </script>
+
+    <script>
+        console.log(localStorage);
+    </script>
+
+</body>
+</html>
+

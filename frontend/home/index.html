@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habit Tracker - Home</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Habit Tracker</h1>
+            <div id="today-date">
+                <!-- Display today's date dynamically -->
+            </div>
+        </header>
+
+        <section class="habit-list">
+            <h2>Your Habits</h2>
+            <ul id="habit-list">
+                <!-- Habit items will be dynamically populated here -->
+            </ul>
+        </section>
+
+        <button id="add-habit-btn">Add New Habit</button>
+        <button id="logout-btn">Logout</button>
+
+        <!-- Floating form -->
+        <div id="floating-form">
+            <h3>Add New Habit</h3>
+            <form id="habit-form">
+                <label for="title">Title</label>
+                <input type="text" id="title" name="title" required maxlength="255">
+
+                <label for="description">Description</label>
+                <textarea id="description" name="description"></textarea>
+
+                <label for="frequency">Frequency</label>
+                <select id="frequency" name="frequency" required>
+                    <option value="">Select Frequency</option>
+                    <option value="Daily">Daily</option>
+                    <option value="Weekly">Weekly</option>
+                </select>
+
+                <div class="form-buttons">
+                    <button type="submit">Submit</button>
+                    <button type="button" id="cancel-btn">Cancel</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Overlay -->
+        <div id="overlay"></div>
+    </div>
+
+    
+</body>
+</html>
+
+
+<script>
+    // Function to check if the user is logged in
+    function checkLoginStatus() {
+        const accessToken = localStorage.getItem('access_token');
+
+        if (!accessToken) {
+            // User is not logged in
+            console.log('User is not logged in');
+            // Redirect to the login page
+            window.location.href = '../login/login.html'; // Replace with your app's login page URL
+        } else {
+            // User is logged in, show the page content
+            console.log('User is logged in');
+            displayTodayDate();
+        }
+    }
+
+    function displayTodayDate() {
+        const today = new Date();
+        const date = today.toLocaleDateString(); // This will format the date to a readable format (e.g., "1/10/2025")
+        
+        document.getElementById("today-date").textContent = date;
+    }
+
+    // Call the function on page load to check login status
+    window.onload = function() {
+        checkLoginStatus(); // Check login first
+    };
+</script>
+
+<script>
+    // Function to fetch all habits belonging to the current user
+    function fetchUserHabits() {
+        const accessToken = localStorage.getItem('access_token');
+
+        fetch('http://127.0.0.1:8000/api/habits', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.habits && data.habits.length > 0) {
+                const habitList = document.getElementById("habit-list");
+                habitList.innerHTML = ''; // Clear any existing list items
+
+                // Loop through each habit and create a link for it
+                data.habits.forEach(habit => {
+                    const li = document.createElement("p");
+
+                    // Create a checkbox
+                    const checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.id = `habit-checkbox-${habit.id}`;
+
+                    // Add change event listener to the checkbox
+                    checkbox.addEventListener('change', () => {
+                        if (checkbox.checked) {
+                            // Call the endpoint to create a habit log
+                            const currentDate = new Date().toISOString().split('T')[0]; // Get the current date in 'YYYY-MM-DD' format
+                            trackHabit(habit.id, currentDate, 'Completed');
+                        }
+                    });
+
+                    // Create a link
+                    const link = document.createElement("a");
+                    link.textContent = habit.title; // Display habit title
+                    link.href = '#'; // Prevent default link behavior
+
+                    // Add click event to the link
+                    link.addEventListener('click', () => {
+                        localStorage.setItem('current_habit_id', habit.id); // Store habit ID in local storage
+                        window.location.href = '../habit_detail/habit_detail.html'; // Redirect to detail page
+                    });
+
+                    li.appendChild(checkbox); // Append the checkbox
+                    li.appendChild(link);    // Append the link
+                    habitList.appendChild(li);
+                });
+            } else {
+                document.getElementById("habit-list").innerHTML = '<li>No habits found.</li>';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching habits:', error);
+        });
+    }
+
+    // Function to call the habit tracking endpoint
+    function trackHabit(habitId, date, status) {
+        const accessToken = localStorage.getItem('access_token');
+
+        fetch(`http://127.0.0.1:8000/api/habits/${habitId}/track`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                date: date,
+                status: status,
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                console.log(data.message); // Log success message
+            }
+        })
+        .catch(error => {
+            console.error('Error tracking habit:', error);
+        });
+    }
+
+    // Run the function once the page is loaded
+    document.addEventListener('DOMContentLoaded', fetchUserHabits);
+</script>
+
+
+    
+<script>
+    document.getElementById('logout-btn').addEventListener('click', function () {
+        const token = localStorage.getItem('access_token'); // Retrieve the token from local storage
+
+        if (!token) {
+            console.error('No access token found');
+            return;
+        }
+
+        fetch('http://127.0.0.1:8000/api/logout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to log out');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Logout successful:', data);
+            // Clear the token and perform logout actions
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('selected_habit_id');
+            localStorage.clear();
+            window.location.href = '../login/login.html'; // Redirect to login page or another route
+        })
+        .catch(error => {
+            console.error('Error logging out:', error);
+        });
+    });
+</script>
+
+<script>
+    // Add click event listener to the button
+    document.getElementById('clear-storage-btn').addEventListener('click', () => {
+        // Clear all items from localStorage
+        localStorage.clear();
+        alert('LocalStorage cleared!');
+    });
+</script>
+
+<script>
+    console.log(localStorage);
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const addHabitBtn = document.getElementById('add-habit-btn');
+        const floatingForm = document.getElementById('floating-form');
+        const overlay = document.getElementById('overlay');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const habitForm = document.getElementById('habit-form');
+    
+        // Show the form and overlay
+        addHabitBtn.addEventListener('click', () => {
+            floatingForm.style.display = 'block';
+            overlay.style.display = 'block';
+        });
+    
+        // Hide the form and overlay
+        cancelBtn.addEventListener('click', () => {
+            floatingForm.style.display = 'none';
+            overlay.style.display = 'none';
+        });
+    
+        // Hide the form and overlay when clicking on the overlay
+        overlay.addEventListener('click', () => {
+            floatingForm.style.display = 'none';
+            overlay.style.display = 'none';
+        });
+    
+        // Handle form submission
+        habitForm.addEventListener('submit', async (event) => {
+            event.preventDefault(); // Prevent form from refreshing the page
+    
+            const title = document.getElementById('title').value;
+            const description = document.getElementById('description').value;
+            const frequency = document.getElementById('frequency').value;
+    
+            const accessToken = localStorage.getItem('access_token');
+            if (!accessToken) {
+                console.error('No access token found. Please log in.');
+                return;
+            }
+    
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/habits', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify({
+                        title,
+                        description,
+                        frequency
+                    })
+                });
+    
+                if (response.ok) {
+                    console.log('Habit created successfully');
+                    // Reset the form and hide it
+                    habitForm.reset();
+                    floatingForm.style.display = 'none';
+                    overlay.style.display = 'none';
+                } else {
+                    const errorData = await response.json();
+                    console.error('Error creating habit:', errorData.message);
+                    alert('Failed to create habit: ' + (errorData.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error creating habit:', error);
+                alert('Failed to create habit. Please try again later.');
+            }
+        });
+    });
+    </script>
+    
+    
+
+
+
+

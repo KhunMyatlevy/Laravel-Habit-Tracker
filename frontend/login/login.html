@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="login-container">
+        <h2>Login</h2>
+        
+        <form id="login-form">
+            <div class="input-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required placeholder="Enter your email">
+            </div>
+            
+            <div class="input-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required placeholder="Enter your password">
+            </div>
+            
+            <button type="submit">Login</button>
+        </form>
+        
+        <p id="error-message" class="error-message"></p>
+    </div>
+
+    
+</body>
+</html>
+
+<script>
+    document.getElementById('login-form').addEventListener('submit', async function(event) {
+        event.preventDefault(); // Prevent form submission to allow AJAX request
+
+        // Get the form data
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        // Validate the inputs
+        if (!email || !password) {
+            document.getElementById('error-message').textContent = "Please fill in all fields.";
+            return;
+        }
+
+        // Prepare the data to send to the backend
+        const loginData = {
+            email: email,
+            password: password
+        };
+
+        try {
+            // Send login request to backend API
+            const response = await fetch('http://127.0.0.1:8000/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(loginData),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Handle successful login
+                // You can store the access token in localStorage/sessionStorage or use it for subsequent requests
+                localStorage.setItem('access_token', data.access_token);
+
+                // Redirect to the home page (or another page)
+                window.location.href = '../home/index.html'; // Change this to your app's home page URL
+            } else {
+                // Handle invalid credentials
+                document.getElementById('error-message').textContent = data.message || "Login failed.";
+            }
+        } catch (error) {
+            // Handle network or other errors
+            document.getElementById('error-message').textContent = "An error occurred. Please try again.";
+            console.error('Error during login:', error);
+        }
+    });
+</script>
+

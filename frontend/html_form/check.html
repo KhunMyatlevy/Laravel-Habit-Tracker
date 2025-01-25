@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checklist Button Example</title>
+   
+</head>
+<body>
+    <h1>Checklist Button Demo</h1>
+    <label class="checklist-button">
+        <input type="checkbox" id="checklist-button">
+        <span>Mark as Checked</span>
+    </label>
+
+    <script>
+        document.getElementById('checklist-button').addEventListener('change', (event) => {
+            if (event.target.checked) {
+                alert('Checked!');
+            }
+        });
+    </script>
+</body>
+</html>
